@@ -89,8 +89,13 @@ let browser: Browser;
 const initializeBrowser = async () => {
   if (BROWSER_WS_ENDPOINT) {
     console.log(`🔌 Connecting to browser via WebSocket: ${BROWSER_WS_ENDPOINT}`);
-    browser = await chromium.connect(BROWSER_WS_ENDPOINT);
-    console.log('✅ Successfully connected to remote browser');
+    try {
+      browser = await chromium.connect(BROWSER_WS_ENDPOINT);
+      console.log('✅ Successfully connected to remote browser');
+    } catch (error) {
+      console.error('❌ Failed to connect to remote browser:', error);
+      throw new Error(`Failed to connect to WebSocket endpoint: ${BROWSER_WS_ENDPOINT}. ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   } else {
     console.log('🚀 Launching local browser');
     browser = await chromium.launch({
