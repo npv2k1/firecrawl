@@ -18,6 +18,7 @@ const MAX_CONCURRENT_PAGES = Math.max(1, Number.parseInt(process.env.MAX_CONCURR
 const PROXY_SERVER = process.env.PROXY_SERVER || null;
 const PROXY_USERNAME = process.env.PROXY_USERNAME || null;
 const PROXY_PASSWORD = process.env.PROXY_PASSWORD || null;
+const BROWSER_WS_ENDPOINT = process.env.BROWSER_WS_ENDPOINT || null;
 class Semaphore {
   private permits: number;
   private queue: (() => void)[] = [];
@@ -86,18 +87,31 @@ interface UrlModel {
 let browser: Browser;
 
 const initializeBrowser = async () => {
-  browser = await chromium.launch({
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-gpu'
-    ]
-  });
+  if (BROWSER_WS_ENDPOINT) {
+    console.log(`🔌 Connecting to browser via WebSocket: ${BROWSER_WS_ENDPOINT}`);
+    try {
+      browser = await chromium.connect(BROWSER_WS_ENDPOINT);
+      console.log('✅ Successfully connected to remote browser');
+    } catch (error) {
+      console.error('❌ Failed to connect to remote browser:', error);
+      throw new Error(`Failed to connect to WebSocket endpoint: ${BROWSER_WS_ENDPOINT}. ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  } else {
+    console.log('🚀 Launching local browser');
+    browser = await chromium.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu'
+      ]
+    });
+    console.log('✅ Local browser launched successfully');
+  }
 };
 
 const createContext = async (skipTlsVerification: boolean = false) => {
